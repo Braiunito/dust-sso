@@ -48,3 +48,6 @@ custom-models.json
 
 # python
 __pycache__
+
+# SmartEscrow: service-account de pega para el emulador GCS (NO commitear)
+.se-fake-sa.json

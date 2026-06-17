@@ -40,3 +40,9 @@ node_modules
 # Storybook static build output
 **/storybook-static/
 
+
+# SmartEscrow (fork) — secretos, NUNCA commitear (repo público)
+.env.secrets
+**/.env.secrets
+.se-fake-sa.json
+**/.se-fake-sa.json

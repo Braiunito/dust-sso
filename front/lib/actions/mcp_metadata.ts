@@ -351,6 +351,29 @@ async function resolveRemoteServerOAuthToken(
   }
 }
 
+// [SmartEscrow self-host] Email del último mensaje de usuario de la conversación.
+// El backend (Symfony, sesión SSO) fija context.email; el LLM no puede alterarlo.
+// Se usa para reenviar la identidad del usuario final al MCP server remoto propio
+// (header de confianza X-Dust-End-User-Email) y acotar datos sin OAuth interactivo.
+function getSmartEscrowEndUserEmail(conversation: {
+  content?: Array<Array<{ type?: string; context?: { email?: string | null }; user?: { email?: string | null } | null }>>;
+}): string | undefined {
+  const content = conversation?.content ?? [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const versions = content[i] ?? [];
+    for (let j = versions.length - 1; j >= 0; j--) {
+      const m = versions[j];
+      if (m?.type === "user_message") {
+        const email = m.user?.email ?? m.context?.email ?? undefined;
+        return typeof email === "string" && email.includes("@")
+          ? email
+          : undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
 export async function connectToMCPServer(
   auth: Authenticator,
   {
@@ -576,10 +599,23 @@ export async function connectToMCPServer(
           } = await createMCPProxyConfig(auth, url.hostname);
 
           try {
+            // [SmartEscrow self-host] Reenvía la identidad del usuario final de la
+            // conversación como header de confianza, para que el MCP server remoto
+            // propio acote los datos al usuario autenticado SIN OAuth interactivo.
+            // Va detrás del shared-secret (solo el server de confianza recibe la llamada)
+            // y el email lo fija el backend desde la sesión SSO (no el LLM).
+            const seEndUserEmail = agentLoopContext?.runContext
+              ? getSmartEscrowEndUserEmail(agentLoopContext.runContext.conversation)
+              : undefined;
             const req = {
               requestInit: {
-                // Include stored custom headers
-                headers: remoteMCPServer.customHeaders ?? {},
+                // Include stored custom headers (+ SmartEscrow end-user identity)
+                headers: {
+                  ...(remoteMCPServer.customHeaders ?? {}),
+                  ...(seEndUserEmail
+                    ? { "X-Dust-End-User-Email": seEndUserEmail }
+                    : {}),
+                },
                 dispatcher,
               },
               authProvider: new MCPOAuthProvider(token),

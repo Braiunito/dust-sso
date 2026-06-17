@@ -71,6 +71,15 @@ export async function hasReachedProgrammaticUsageLimits(
 export async function checkProgrammaticUsageLimits(
   auth: Authenticator
 ): Promise<Result<void, ProgrammaticUsageLimitError>> {
+  // [SmartEscrow self-host] Desactiva los gates de billing del API programático
+  // (créditos / cap diario / cap por key) que dependen de Metronome (cloud de
+  // Dust) y no aplican en self-host. Guard por env: off por defecto → sin cambio
+  // de comportamiento salvo que se ponga DUST_DISABLE_USAGE_LIMITS=true.
+  // Ver docs/17 §11.bis y docs/19. (Patch local del fork, no upstream.)
+  if (process.env.DUST_DISABLE_USAGE_LIMITS === "true") {
+    return new Ok(undefined);
+  }
+
   const isAdmin = auth.isAdmin();
 
   // First check workspace credits.
