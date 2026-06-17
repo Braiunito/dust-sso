@@ -28,23 +28,23 @@ function log(...a: unknown[]) {
   log("INTERNAL_MCP_VIEWS=" + internal);
   log("REMOTE_MCP_VIEWS=" + remote);
 
-  const found = await searchAgentConfigurationsByName(auth, "se-wallet");
-  const match = found.find((a) => a.name === "se-wallet");
+  const found = await searchAgentConfigurationsByName(auth, "se-orquestador");
+  const match = found.find((a) => a.name === "se-orquestador");
   if (match) {
     const cur = await getAgentConfiguration(auth, {
       agentId: match.sId,
       variant: "full",
     });
     log(
-      "SE_WALLET_MODEL=" +
+      "SE_ORCH_MODEL=" +
         (cur?.model
           ? `${cur.model.providerId}/${cur.model.modelId}`
           : "none")
     );
-    log("SE_WALLET_ACTIONS=" + (cur?.actions?.length ?? 0));
+    log("SE_ORCH_ACTIONS=" + (cur?.actions?.length ?? 0));
   } else {
-    log("SE_WALLET_MODEL=absent");
-    log("SE_WALLET_ACTIONS=0");
+    log("SE_ORCH_MODEL=absent");
+    log("SE_ORCH_ACTIONS=0");
   }
   process.exit(0);
 })().catch((e) => {

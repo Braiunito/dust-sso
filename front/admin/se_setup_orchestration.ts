@@ -19,28 +19,22 @@ import { UserResource } from "@app/lib/resources/user_resource";
 const WS = "RCZE0JGoXI";
 const USER_EMAIL = "se-bot@smartescrow.es";
 const SERVER_SID = "rms_M3noyTRbIM";
+// Modelo base configurable por ENV (el orquestador/router lo usan). Es la "IA base"
+// del generador de agentes: se define en el entorno y este script lo aplica a Dust.
 const MODEL = {
-  providerId: "anthropic",
-  modelId: "claude-sonnet-4-6",
-  temperature: 0.7,
-  reasoningEffort: "medium",
+  providerId: process.env.DUST_AGENT_PROVIDER || "anthropic",
+  modelId: process.env.DUST_AGENT_MODEL || "claude-sonnet-4-6",
+  temperature: Number(process.env.DUST_AGENT_TEMPERATURE || "0.7"),
+  reasoningEffort: process.env.DUST_AGENT_REASONING || "medium",
 };
-
-const WALLET_INSTRUCTIONS =
-  "Eres el especialista de WALLET de SmartEscrow. Cuando el usuario pregunte por su saldo, dinero " +
-  "disponible, balance o estado de su wallet, invoca SIEMPRE la herramienta `wallet_balance` SIN " +
-  "argumentos: el servidor resuelve al usuario autenticado y consulta el saldo EN VIVO de Sefide " +
-  "(fuente de verdad). NO uses project_query para el saldo: la columna de BD está DESINCRONIZADA. " +
-  "Tras recibir el resultado, responde en español con el saldo disponible (`balance_available`), la " +
-  "divisa y el estado operativo (`operation_status`), tal cual, sin inventar. Si `balance_available` " +
-  "es null, di que la cuenta no está operativa en Sefide. No pidas datos al usuario: la identidad se " +
-  "resuelve sola en el servidor.";
 
 const ORCHESTRATOR_INSTRUCTIONS =
   "Eres el asistente de SmartEscrow. Respondes con normalidad a cualquier consulta. Cuando el usuario " +
   "pregunte por su SALDO, dinero disponible, balance o estado de su WALLET, invoca la herramienta " +
   "`wallet_balance` SIN argumentos (el servidor resuelve su identidad y consulta Sefide en vivo) y " +
-  "responde con el saldo disponible (`balance_available`), la divisa y el estado operativo. NO uses " +
+  "responde con el saldo disponible (`balance_available`), la divisa y el estado operativo. Si la respuesta " +
+  "trae `shared: true` (eres staff de SmartEscrow), NO hay cuenta personal: informa que son las cuentas " +
+  "COMPARTIDAS de la empresa y lista CADA wallet del array `wallets` con su `label` y su `balance`. NO uses " +
   "project_query para el saldo (BD desincronizada). Para otras consultas de datos del cliente (no el " +
   "saldo) puedes usar `project_query` (solo lectura, acotada al usuario). Para todo lo demás, responde " +
   "como un asistente general, sin inventar datos.";
@@ -134,21 +128,15 @@ async function upsertAgent(
   }
   log("VIEW_SID=" + view.sId);
 
-  const walletSid = await upsertAgent(
-    auth, user.sId, user.id, view.sId,
-    "se-wallet",
-    "Especialista de wallet de SmartEscrow: consulta el saldo EN VIVO (Sefide) del usuario.",
-    WALLET_INSTRUCTIONS
-  );
   const orchSid = await upsertAgent(
     auth, user.sId, user.id, view.sId,
     "se-orquestador",
-    "Asistente general de SmartEscrow; resuelve también el saldo de wallet (en vivo) del usuario.",
+    "Asistente general de SmartEscrow (punto único): resuelve cualquier consulta y, con identidad por " +
+      "usuario, datos de proyectos del cliente (saldo en vivo de wallet, etc.) vía las tools del server MCP.",
     ORCHESTRATOR_INSTRUCTIONS
   );
 
-  log("SE_WALLET_SID=" + walletSid);
-  log("SE_ORQUESTADOR_SID=" + orchSid);
+  log("SE_ORQUESTADOR_SID=" + orchSid + " MODEL=" + MODEL.providerId + "/" + MODEL.modelId);
   process.exit(0);
 })().catch((e) => {
   // eslint-disable-next-line no-console

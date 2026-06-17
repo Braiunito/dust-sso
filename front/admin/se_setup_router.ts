@@ -14,7 +14,9 @@ import { UserResource } from "@app/lib/resources/user_resource";
 const WS = "RCZE0JGoXI";
 const USER_EMAIL = "se-bot@smartescrow.es";
 const ROUTER_NAME = "se-router";
-const CHILD_NAME = "se-wallet";
+// Especialista al que delega. se-wallet (demo) fue retirado; hoy el "trabajador" con todas
+// las tools es el orquestador. Cuando haya especialistas reales por dominio, se añaden aquí.
+const CHILD_NAME = process.env.SE_ROUTER_CHILD || "se-orquestador";
 
 const ROUTER_INSTRUCTIONS =
   "Eres el ENRUTADOR de SmartEscrow. Tu trabajo es decidir qué especialista atiende cada consulta y " +
@@ -76,10 +78,10 @@ const ROUTER_INSTRUCTIONS =
     status: "active",
     scope: "visible",
     model: {
-      providerId: "anthropic",
-      modelId: "claude-sonnet-4-6",
-      temperature: 0.7,
-      reasoningEffort: "medium",
+      providerId: process.env.DUST_AGENT_PROVIDER || "anthropic",
+      modelId: process.env.DUST_AGENT_MODEL || "claude-sonnet-4-6",
+      temperature: Number(process.env.DUST_AGENT_TEMPERATURE || "0.7"),
+      reasoningEffort: process.env.DUST_AGENT_REASONING || "medium",
     },
     actions: [action],
     templateId: null,
