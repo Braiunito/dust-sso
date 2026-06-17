@@ -11,7 +11,9 @@ import { createOrUpgradeAgentConfiguration } from "@app/lib/api/assistant/config
 import { Authenticator } from "@app/lib/auth";
 
 const WS = "RCZE0JGoXI";
-const AGENT_NAME = "se-wallet";
+// Agente a re-modelar (por nombre). Default se-wallet; usar SE_AGENT_NAME=se-orquestador
+// para cambiar el modelo del PUNTO ÚNICO (el agente por defecto del chat), etc.
+const AGENT_NAME = process.env.SE_AGENT_NAME || "se-wallet";
 const PROVIDER = process.env.SE_PROVIDER || "anthropic";
 const MODEL = process.env.SE_MODEL || "claude-sonnet-4-6";
 const EFFORT = process.env.SE_EFFORT || "medium";
